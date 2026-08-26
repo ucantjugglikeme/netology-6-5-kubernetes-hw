@@ -1,0 +1,11 @@
+groups:
+  - name: host_alerts
+    rules:
+      - alert: HighMetricValue
+        expr: vasin_sa > 10
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Высокое значение метрики на хосте."
+          description: "Значение метрики больше 10. Текущее значение: {{ $value }}."
