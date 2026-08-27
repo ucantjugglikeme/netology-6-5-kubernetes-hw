@@ -21,7 +21,7 @@
 3. Создадим файл service-redis.yaml для Delpoyment.
 4. Применим манифесты и проверим работу Deployment и Service.
 
-Файл deployment-redis.yaml
+Файл deployment-redis.yaml:
 
 ```YAML
 apiVersion: apps/v1
@@ -48,7 +48,7 @@ spec:
         - containerPort: 6379
 ```
 
-Файл service-redis.yaml
+Файл service-redis.yaml:
 
 ```YAML
 apiVersion: v1
@@ -91,3 +91,102 @@ spec:
 ![Удаление пода и проброс порта для нового пода](https://github.com/ucantjugglikeme/netology-6-5-kubernetes-hw/blob/main/img/img8.png)
 
 ![Подключение к Redis](https://github.com/ucantjugglikeme/netology-6-5-kubernetes-hw/blob/main/img/img9.png)
+
+
+---
+
+### Задание 4
+
+1. Создадим ConfigMap, в котором укажем конфигурацию в файле default.conf.
+2. Создадим Deployment, в котором укажем образ nginx:alpine, укажем пути монтирования и свяжем том с ConfigMap.
+3. Создадим Service для Deployment nginx.
+4. Создадим Ingress для направления запросов на /test nginx.
+5. Запустим Deployment и Ingress и проверим работу nginx.
+
+Файл deployment-nginx.yaml:
+
+```YAML
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-conf
+data:
+  default.conf: |
+    server {
+        listen       80;
+        listen  [::]:80;
+        server_name  localhost;
+
+        location /test {
+            add_header Content-Type text/plain;
+            return 200 'Hello from k8s';
+        }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.31.4-alpine3.24
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/nginx/conf.d/default.conf
+          subPath: default.conf
+      volumes:
+      - name: config-volume
+        configMap:
+          name: nginx-conf
+```
+
+Файл ingress-nginx.yaml:
+
+```YAML
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+spec:
+  type: ClusterIP
+  selector:
+    app: nginx
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nginx-ingress
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /test
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx-service
+            port:
+              number: 80
+```
+
+![Создание ConfigMap и Deployment nginx](https://github.com/ucantjugglikeme/netology-6-5-kubernetes-hw/blob/main/img/img10.png)
+
+![Создание Service и Ingress и проверка работы nginx](https://github.com/ucantjugglikeme/netology-6-5-kubernetes-hw/blob/main/img/img11.png)
